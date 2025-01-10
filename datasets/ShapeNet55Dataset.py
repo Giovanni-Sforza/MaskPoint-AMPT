@@ -9,15 +9,15 @@ from utils.logger import *
 @DATASETS.register_module()
 class ShapeNet(data.Dataset):
     def __init__(self, config):
-        self.data_root = config.DATA_PATH
-        self.pc_path = config.PC_PATH
-        self.subset = config.subset
-        self.npoints = config.N_POINTS
+        self.data_root = config.DATA_PATH #ShapeNet-55.yaml
+        self.pc_path = config.PC_PATH #ShapeNet-55.yaml
+        self.subset = config.subset #pretrain_shapenet.yaml
+        self.npoints = config.N_POINTS #ShapeNet-55.yaml
         
         self.data_list_file = os.path.join(self.data_root, f'{self.subset}.txt')
         test_data_list_file = os.path.join(self.data_root, 'test.txt')
         
-        self.sample_points_num = config.npoints
+        self.sample_points_num = config.npoints #pretrain_shapenet.yaml
         self.whole = config.get('whole')
 
         print_log(f'[DATASET] sample out {self.sample_points_num} points', logger = 'ShapeNet-55')

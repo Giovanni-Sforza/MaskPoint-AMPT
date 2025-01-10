@@ -98,6 +98,7 @@ def run_net(args, config, train_writer=None, val_writer=None):
     for epoch in range(start_epoch, config.max_epoch + 1):
         if args.distributed:
             train_sampler.set_epoch(epoch)
+        #torch.cuda.empty_cache()
         base_model.train()
 
         epoch_start_time = time.time()
@@ -124,6 +125,8 @@ def run_net(args, config, train_writer=None, val_writer=None):
                 points = data[0].cuda()
                 points = misc.fps(points, npoints)
             elif dataset_name.startswith('ScanNet'):
+                points = data.cuda()
+            elif dataset_name== 'Amptdata':
                 points = data.cuda()
             else:
                 raise NotImplementedError(f'Train phase do not support {dataset_name}')
@@ -213,6 +216,7 @@ def run_net(args, config, train_writer=None, val_writer=None):
     if val_writer is not None:
         val_writer.close()
 
+#initial one
 def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_writer, args, config, logger = None):
     print_log(f"[VALIDATION] Start validating epoch {epoch}", logger = logger)
     base_model.eval()  # set model to eval mode
@@ -273,7 +277,67 @@ def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_wri
         val_writer.add_scalar('Metric/ACC', svm_acc, epoch)
 
     return Acc_Metric(svm_acc)
+"""
+def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_writer, args, config, logger=None):
+    print_log(f"[VALIDATION] Start validating epoch {epoch}", logger=logger)
+    base_model.eval()  # set model to eval mode
+
+    test_features, test_labels = [], []
+    train_features, train_labels = [], []
+    npoints = config.dataset.train.others.npoints
+
+    with torch.no_grad():
+        for idx, (taxonomy_ids, model_ids, data) in enumerate(extra_train_dataloader):
+            points = data.cuda()  # Directly use the points as ShapeNet format
+            labels = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+
+            points = misc.fps(points, npoints)
+            assert points.size(1) == npoints
+
+            features = base_model(points, noaug=True)
+            train_features.append(features.detach())
+            train_labels.append(labels)  # Add the label tensor
+
+        for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
+            points = data.cuda()
+            labels = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+
+            points = misc.fps(points, npoints)
+            assert points.size(1) == npoints
+
+            features = base_model(points, noaug=True)
+            test_features.append(features.detach())
+            test_labels.append(labels)
+
+        train_features = torch.cat(train_features, dim=0)
+        train_labels = torch.cat(train_labels, dim=0)  # Concatenate the label tensors
+        test_features = torch.cat(test_features, dim=0)
+        test_labels = torch.cat(test_labels, dim=0)
+
+        if args.distributed:
+            train_features = dist_utils.gather_tensor(train_features, args)
+            train_labels = dist_utils.gather_tensor(train_labels, args)
+            test_features = dist_utils.gather_tensor(test_features, args)
+            test_labels = dist_utils.gather_tensor(test_labels, args)
+
+        svm_acc = evaluate_svm(
+            train_features.cpu().numpy(),
+            train_labels.cpu().numpy(),
+            test_features.cpu().numpy(),
+            test_labels.cpu().numpy(),
+        )
+
+        print_log('[Validation] EPOCH: %d  acc = %.4f' % (epoch, svm_acc), logger=logger)
+
+        if args.distributed:
+            torch.cuda.synchronize()
+
+    if val_writer is not None:
+        val_writer.add_scalar('Metric/ACC', svm_acc, epoch)
+
+    return Acc_Metric(svm_acc)
 
 
 def test_net():
     pass
+"""

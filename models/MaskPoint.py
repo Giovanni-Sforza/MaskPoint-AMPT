@@ -207,9 +207,9 @@ class MaskPointTransformer(nn.Module):
             num_heads = self.num_heads
         )
         self.cls_head = nn.Sequential(
-            nn.Linear(self.trans_dim, self.cls_dim),
+            nn.Linear(self.trans_dim, self.cls_dim*32),
             nn.GELU(),
-            nn.Linear(self.cls_dim, self.cls_dim)
+            nn.Linear(self.cls_dim*32, self.cls_dim)
         )
         self.bin_cls_head = nn.Sequential(
             nn.Linear(self.trans_dim, 64),
@@ -296,6 +296,8 @@ class MaskPointTransformer(nn.Module):
                 n_mask = int(mask_ratio * G)
             elif self.mask_ratio > 0:
                 n_mask = int(self.mask_ratio * G)
+            elif self.mask_ratio == 0:
+                n_mask = int(0)
             perm = torch.randperm(G)[:n_mask]
             mask[:, perm] = True
         else:
@@ -312,7 +314,7 @@ class MaskPointTransformer(nn.Module):
 
         if self.enc_arch == '3detr':
             x = self.blocks(masked_input_tokens.transpose(0, 1), pos=pos.transpose(0, 1))[1].transpose(0, 1)
-
+            #print("doing!!!!!!!!!!!!!")
             if only_cls_tokens:
                 return self.cls_head(torch.mean(x, dim=1))
         else:
@@ -321,7 +323,7 @@ class MaskPointTransformer(nn.Module):
 
             x = self.blocks(x, pos)
             x = self.norm(x)
-
+            
             if only_cls_tokens:
                 return self.cls_head(x[:, 0])
 
@@ -406,6 +408,7 @@ class MaskPoint(nn.Module):
     def forward_eval(self, pts):
         with torch.no_grad():
             neighborhood, center = self.group_divider(pts)
+            # only_cls_tokens =
             cls_feature = self.transformer_q(neighborhood, center, only_cls_tokens = True, noaug = True, points_orig = pts)
             return cls_feature
 

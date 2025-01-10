@@ -4,3 +4,4 @@ import datasets.ModelNetDataset
 import datasets.ModelNetDatasetFewShot
 import datasets.ScanObjectNNDataset
 import datasets.ScanNet
+import datasets.Amptdata

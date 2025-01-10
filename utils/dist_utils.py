@@ -52,3 +52,19 @@ def gather_tensor(tensor, args):
     torch.distributed.all_gather(output_tensors, tensor)
     concat = torch.cat(output_tensors, dim=0)
     return concat
+
+
+"""The **`/home/qiuyu/MaskPoint/utils/dist_utils.py`** file is designed to facilitate distributed computing using PyTorch's distributed package. Here's a breakdown of its purpose and functionality:
+
+1. **Initialization of Distributed Environment:**
+   - The `init_dist` function initializes the distributed environment based on the specified launcher type. It currently supports the 'pytorch' launcher, which uses PyTorch's native distributed package.
+   - The `_init_dist_pytorch` function sets up the distributed process group using the specified backend (e.g., 'nccl' for NVIDIA Collective Communications Library). It determines the rank of the current process and sets the appropriate GPU device for the process.
+
+2. **Distributed Information Retrieval:**
+   - The `get_dist_info` function provides information about the current distributed environment, such as the rank of the current process and the total number of processes (world size). This is useful for coordinating tasks across multiple processes.
+
+3. **Tensor Reduction and Gathering:**
+   - The `reduce_tensor` function performs a reduction operation (specifically, a sum) across all processes for a given tensor. It then averages the result by dividing by the world size. This is commonly used to aggregate results like gradients or metrics across multiple GPUs.
+   - The `gather_tensor` function collects tensors from all processes and concatenates them along a specified dimension. This is useful for gathering results from different processes into a single tensor for further processing or analysis.
+
+Overall, this file provides utility functions to manage and operate in a distributed computing environment, enabling parallel processing and efficient use of multiple GPUs for tasks such as training machine learning models."""
