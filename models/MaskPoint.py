@@ -357,7 +357,7 @@ class MaskPoint(nn.Module):
         self.query_loss_weight = config.transformer_config.query_loss_weight
         self.use_sigmoid = config.transformer_config.use_sigmoid
         self.use_focal_loss = config.transformer_config.use_focal_loss
-        if self.use_focal_loss:
+        if self.use_focal_loss:# true
             self.focal_loss_alpha = config.transformer_config.focal_loss_alpha
             self.focal_loss_gamma = config.transformer_config.focal_loss_gamma
 
@@ -419,6 +419,34 @@ class MaskPoint(nn.Module):
         focal_weight = (self.focal_loss_alpha * target + (1 - self.focal_loss_alpha) * (1 - target)) * pt.pow(self.focal_loss_gamma)
         loss = F.binary_cross_entropy_with_logits(pred, target, reduction='none') * focal_weight
         return loss
+    
+    def compute_acc_train(self, pred, target):
+        """
+        Computes the accuracy for binary classification.
+
+        Args:
+            pred (torch.Tensor): Raw model outputs (logits), shape (B, N, 2).
+            target (torch.Tensor): Ground truth one-hot labels, shape (B, N, 2).
+
+        Returns:
+            torch.Tensor: Accuracy as a scalar tensor.
+        """
+        # Apply sigmoid to logits to get probabilities
+        pred_probs = pred.softmax(dim=-1)  # Shape: (B, N, 2)
+        pred_classes = pred_probs.argmax(dim=-1)  # Predicted classes, shape (B, N)
+
+        # Convert one-hot targets back to class indices
+        target_classes = target.argmax(dim=-1)  # Shape: (B, N)
+
+        # Compute correct predictions
+        correct = (pred_classes == target_classes).float()  # Shape: (B, N)
+
+        # Ignore labels where target is -1 (if applicable)
+        valid_mask = target_classes != -1
+        acc = correct[valid_mask].mean() if valid_mask.any() else torch.tensor(0.0, device=pred.device)
+        
+        return acc
+
 
     def loss_bce(self, preds, labels, reduction='mean'):
         loss_labels = labels.clone()
@@ -428,11 +456,14 @@ class MaskPoint(nn.Module):
 
         if self.use_focal_loss:
             loss = self.loss_focal_bce(preds, loss_labels_one_hot)
+            acc = self.compute_acc_train(preds, loss_labels_one_hot)
         else:
             loss = self.loss_bce_batch(preds, loss_labels_one_hot.float())
+            acc = self.compute_acc_train(preds, loss_labels_one_hot)
         if reduction == 'mean':
             loss = loss[labels != -1].mean()
-        return loss
+
+        return loss,acc
 
     def forward(self, pts, noaug = False, **kwargs):
         if noaug:
@@ -444,7 +475,7 @@ class MaskPoint(nn.Module):
             q_cls_feature, query_preds, query_labels = self.transformer_q(neighborhood, center, points_orig=pts)
             q_cls_feature = F.normalize(q_cls_feature, dim=1)
 
-            if self.use_moco_loss:
+            if self.use_moco_loss:# only use moco loss when dataset == scannet
                 with torch.no_grad():
                     k_cls_feature = self.transformer_k(neighborhood, center, points_orig=pts, only_cls_tokens = True)
                     k_cls_feature = F.normalize(k_cls_feature, dim=1)
@@ -461,8 +492,8 @@ class MaskPoint(nn.Module):
                 self._dequeue_and_enqueue(k_cls_feature)
 
             if self.use_sigmoid:
-                recon_loss = self.loss_bce(query_preds, query_labels)
+                recon_loss, acc = self.loss_bce(query_preds, query_labels)
             else:
                 recon_loss = self.loss_ce(query_preds, query_labels)
             recon_loss = self.query_loss_weight * recon_loss
-            return recon_loss, moco_loss
+            return recon_loss, moco_loss, acc

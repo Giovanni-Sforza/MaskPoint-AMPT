@@ -106,7 +106,7 @@ def run_net(args, config, train_writer=None, val_writer=None):
         batch_time = AverageMeter()
         data_time = AverageMeter()
         losses = AverageMeter(['Loss1', 'Loss2'])
-
+        acc_avg = AverageMeter()
         num_iter = 0
         grad_clip_val = config.grad_norm_clip
 
@@ -140,7 +140,7 @@ def run_net(args, config, train_writer=None, val_writer=None):
                 else:
                     points = fixed_sample.clone()
 
-            loss_1, loss_2 = base_model(points)
+            loss_1, loss_2, acc = base_model(points)
 
             _loss = loss_1 + loss_2
 
@@ -167,15 +167,17 @@ def run_net(args, config, train_writer=None, val_writer=None):
                 losses.update([loss_1.item(), loss_2.item()])
             else:
                 losses.update([loss_1.item(), loss_2.item()])
-
+                acc_avg.update(acc.item())
 
             if args.distributed:
                 torch.cuda.synchronize()
+                acc_avg.update(acc.item())
 
 
             if train_writer is not None:
                 train_writer.add_scalar('Loss/Batch/Loss_1', loss_1.item(), n_itr)
                 train_writer.add_scalar('Loss/Batch/Loss_2', loss_2.item(), n_itr)
+                train_writer.add_scalar('Loss/Batch/Accuracy', acc.item(), n_itr)
                 train_writer.add_scalar('Loss/Batch/LR', optimizer.param_groups[0]['lr'], n_itr)
 
 
@@ -183,9 +185,9 @@ def run_net(args, config, train_writer=None, val_writer=None):
             batch_start_time = time.time()
 
             if idx % 20 == 0:
-                print_log('[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) Losses = %s lr = %.6f' %
+                print_log('[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) Losses = %s lr = %.6f acc = %s ' %
                             (epoch, config.max_epoch, idx + 1, n_batches, batch_time.val(), data_time.val(),
-                            ['%.4f' % l for l in losses.val()], optimizer.param_groups[0]['lr']), logger = logger)
+                            ['%.4f' % l for l in losses.val()], optimizer.param_groups[0]['lr'],acc_avg.val()), logger = logger)
         if isinstance(scheduler, list):
             for item in scheduler:
                 item.step(epoch)
@@ -196,9 +198,11 @@ def run_net(args, config, train_writer=None, val_writer=None):
         if train_writer is not None:
             train_writer.add_scalar('Loss/Epoch/Loss_1', losses.avg(0), epoch)
             train_writer.add_scalar('Loss/Epoch/Loss_2', losses.avg(1), epoch)
+            train_writer.add_scalar('Loss/Epoch/Accuracy', acc_avg.avg(), epoch)
 
-        print_log('[Training] EPOCH: %d EpochTime = %.3f (s) Losses = %s' %
-            (epoch,  epoch_end_time - epoch_start_time, ['%.4f' % l for l in losses.avg()]), logger = logger)
+
+        print_log('[Training] EPOCH: %d EpochTime = %.3f (s) Losses = %s Acc = %s ' %
+            (epoch,  epoch_end_time - epoch_start_time, ['%.4f' % l for l in losses.avg()],acc_avg.avg()), logger = logger)
 
         if epoch % args.val_freq == 0 and epoch != 0:
             # Validate the current model
@@ -217,7 +221,7 @@ def run_net(args, config, train_writer=None, val_writer=None):
         val_writer.close()
 
 #initial one
-def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_writer, args, config, logger = None):
+"""def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_writer, args, config, logger = None):
     print_log(f"[VALIDATION] Start validating epoch {epoch}", logger = logger)
     base_model.eval()  # set model to eval mode
 
@@ -276,8 +280,8 @@ def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_wri
     if val_writer is not None:
         val_writer.add_scalar('Metric/ACC', svm_acc, epoch)
 
-    return Acc_Metric(svm_acc)
-"""
+    return Acc_Metric(svm_acc)"""
+
 def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_writer, args, config, logger=None):
     print_log(f"[VALIDATION] Start validating epoch {epoch}", logger=logger)
     base_model.eval()  # set model to eval mode
@@ -340,4 +344,3 @@ def validate(base_model, extra_train_dataloader, test_dataloader, epoch, val_wri
 
 def test_net():
     pass
-"""
