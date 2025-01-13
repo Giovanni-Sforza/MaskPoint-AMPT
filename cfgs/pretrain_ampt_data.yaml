@@ -9,16 +9,17 @@ scheduler: {
   type: CosLR,
   kwargs: {
     epochs: 300,
-    initial_epochs : 0
+    initial_epochs : 1
 }}
 
 dataset : {
   train : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
-            others: {subset: 'train', npoints: 128, whole: True}},
+            others: {subset: 'train', npoints: 128, whole: Flase}},
   val : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
             others: {subset: 'test'}},
-  extra_train : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
-            others: {subset: 'train'}}}          
+  #extra_train : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
+  #          others: {subset: 'train'}}
+  }          
 model : {
   NAME: MaskPoint,
   m: 0.999,
