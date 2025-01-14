@@ -10,7 +10,7 @@ import numpy as np
 from torchvision import transforms
 from datasets import data_transforms
 from utils.grad_utils import IterativePercentile
-
+from sklearn.linear_model import LogisticRegression
 train_transforms = transforms.Compose(
     [
         data_transforms.PointcloudScaleAndTranslate(),
@@ -36,11 +36,25 @@ class Acc_Metric:
         return _dict
 
 
+
+
 def evaluate_svm(train_features, train_labels, test_features, test_labels):
-    clf = LinearSVC()
+    #clf = LinearSVC()
     #clf = SVC(kernel='linear', C=1)
-    clf.fit(train_features, train_labels)
-    pred = clf.predict(test_features)
+    #clf.fit(train_features, train_labels)
+    #pred = clf.predict(test_features)
+    # 初始化 Logistic Regression 模型
+    log_reg = LogisticRegression(
+        penalty='l2',            # 使用 L2 正则化
+        solver='saga',           # saga 是适合大规模数据的优化器
+        max_iter=500,            # 最大迭代次数
+        C=1.0,                   # 正则化强度（较小的 C 值加强正则化）
+        random_state=42          # 固定随机种子
+    )
+    # 训练模型
+    log_reg.fit(train_features, train_labels)
+    # 预测测试集
+    pred = log_reg.predict(test_features)
     return np.sum(test_labels == pred) * 1. / pred.shape[0]
 
 def run_net(args, config, train_writer=None, val_writer=None):
