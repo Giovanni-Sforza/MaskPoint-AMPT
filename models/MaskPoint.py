@@ -206,11 +206,20 @@ class MaskPointTransformer(nn.Module):
             drop_path_rate = dpr,
             num_heads = self.num_heads
         )
+        # initial cls head
+        #self.cls_head = nn.Sequential(
+        #    nn.Linear(self.trans_dim, self.cls_dim*32),
+        #    nn.GELU(),
+        #    nn.Linear(self.cls_dim*32, self.cls_dim)
+        #)
+        # cls head for finetune
         self.cls_head = nn.Sequential(
-            nn.Linear(self.trans_dim, self.cls_dim*32),
-            nn.GELU(),
-            nn.Linear(self.cls_dim*32, self.cls_dim)
+            nn.Linear(self.trans_dim, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, self.cls_dim)
         )
+
         self.bin_cls_head = nn.Sequential(
             nn.Linear(self.trans_dim, 64),
             nn.GELU(),

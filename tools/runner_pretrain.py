@@ -5,7 +5,7 @@ from utils import misc, dist_utils
 import time
 from utils.logger import *
 from utils.AverageMeter import AverageMeter
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC,SVC
 import numpy as np
 from torchvision import transforms
 from datasets import data_transforms
@@ -38,6 +38,7 @@ class Acc_Metric:
 
 def evaluate_svm(train_features, train_labels, test_features, test_labels):
     clf = LinearSVC()
+    #clf = SVC(kernel='linear', C=1)
     clf.fit(train_features, train_labels)
     pred = clf.predict(test_features)
     return np.sum(test_labels == pred) * 1. / pred.shape[0]

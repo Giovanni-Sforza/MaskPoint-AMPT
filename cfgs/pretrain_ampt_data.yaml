@@ -1,7 +1,7 @@
 optimizer : {
   type: AdamW,
   kwargs: {
-  lr : 0.0005, 
+  lr : 0.001, 
   weight_decay : 0.05
 }}
 
@@ -9,7 +9,7 @@ scheduler: {
   type: CosLR,
   kwargs: {
     epochs: 300,
-    initial_epochs : 1
+    initial_epochs : 0
 }}
 
 dataset : {
@@ -17,20 +17,20 @@ dataset : {
             others: {subset: 'train', npoints: 128, whole: Flase}},
   val : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
             others: {subset: 'test'}},
-  #extra_train : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
-  #          others: {subset: 'train'}}
+  extra_train : { _base_: cfgs/dataset_configs/ampt_data_0mb_Nch90_120_3D.yaml, 
+            others: {subset: 'train'}}
   }          
 model : {
   NAME: MaskPoint,
   m: 0.999,
   T: 0.07,
   K: 16384,
-  pos_embed_hidden_dim: 16,
+  pos_embed_hidden_dim: 32,
 
   transformer_config: {
     mask_ratio: 0.25,
-    trans_dim: 48,
-    depth: 3, #12
+    trans_dim: 96,
+    depth: 6, #12
     dec_depth: 1,
     use_sigmoid: true,
     use_moco_loss: false,
@@ -40,7 +40,7 @@ model : {
     focal_loss_alpha: 0.25,
     focal_loss_gamma: 2,
     ambiguous_threshold: -1,
-    ambiguous_dynamic_threshold: 16,
+    ambiguous_dynamic_threshold: 64, #equal to dec_query_real_num
     dec_query_mode: points,     # [center, points]
     dec_query_real_num: 64,
     dec_query_fake_num: 64,
@@ -49,11 +49,11 @@ model : {
     num_heads: 6,
     group_size: 2, 
     num_group: 128, 
-    encoder_dims: 32,
+    encoder_dims: 64,
   }
 }
 
-total_bs : 128
+total_bs : 400
 step_per_update : 1
 grad_norm_clip : 10
-max_epoch : 300
+max_epoch : 128
