@@ -76,6 +76,10 @@ python main.py --config cfgs/pretrain_ampt_data.yaml \
 - `--exp_name`: Name of the experiment
 - `--val_freq`: Validation frequency during training
 
+### Fineturning
+
+Coming soon !
+
 ## License
 This project is licensed under the terms of the [LICENSE](LICENSE) file.
 
