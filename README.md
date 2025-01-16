@@ -47,6 +47,11 @@ The primary goals of the MaskPoint-AMPT project are:
    - GCC >= 4.9
    - torchvision
 
+   if your meet the trouble that `version `GLIBC_2.18' not found`, you can try to install the open3d == 0.9.0 in env python == 3.7:
+   ```bash
+   conda search -c open3d-admin open3d==0.9.0
+   ```
+
    Install required Python packages:
    ```bash
    pip install -r requirements.txt
