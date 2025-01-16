@@ -148,6 +148,8 @@ data/ModelNetFewshot/5way_20shot
 data/ModelNetFewshot/10way_10shot
 data/ModelNetFewshot/10way_20shot
 data/ScanNet/scannet
+data/
+data_processing/
 vis/
 plot/
 checkpoints/
