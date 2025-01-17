@@ -20,6 +20,7 @@ def main():
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':
         args.distributed = False
+        #print('Disable distributed training.')
     else:
         args.distributed = True
         dist_utils.init_dist(args.launcher)
@@ -113,4 +114,5 @@ def main():
 
 
 if __name__ == '__main__':
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     main()

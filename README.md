@@ -57,15 +57,39 @@ The primary goals of the MaskPoint-AMPT project are:
    pip install -r requirements.txt
    ```
 
+   if you find that pip have not install these pkgs in the envs you need:
+   ```bash
+   vim ~/anaconda3/envs/MP10/lib/python3.7/site.py
+   ```
+
+   and change `USER_SITE`, `USER_BASE`:
+   ```bash
+   USER_SITE = /storage/fdunphome/zhangjingzong/anaconda3/envs/MP10/lib/python3.7/site-packages
+   USER_BASE = /storage/fdunphome/zhangjingzong/anaconda3/envs/MP10
+   ```
+
 3. Run the installation script:
    ```bash
    bash install.sh
    ```
+please make sure that gcc has been updated. you can use conda to install some new version of gcc, and add the PATH in ~/.bashrc
 
-4. Verify the installation by running a test script:
-   ```bash
-   python test.py
-   ```
+---
+**Important Notes**:
+   - If your system already includes GCC version >= 4.9, running `bash install.sh` should work fine.
+   - If GCC version is lower than 4.9, you will need to install GCC 9.4.0 and G++ 9.4.0 in the appropriate virtual environment using:
+     ```bash
+     conda install -c conda-forge gcc=9.4.0 g++=9.4.0
+     ```
+     Then, set the environment variables as follows:
+     ```bash
+     export PATH="/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin:$PATH"
+     export CC=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin/gcc
+     export CXX=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin/g++
+     export LD_LIBRARY_PATH=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/lib:$LD_LIBRARY_PATH
+     ```
+     If you have multiple environments with GCC and G++, ensure the environment variables point to the folder of the virtual environment where the program will run.
+
 
 ## Usage
 
