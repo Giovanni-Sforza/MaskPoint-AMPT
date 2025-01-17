@@ -17,6 +17,7 @@ def get_args():
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--gpu', type=int, default=0, help = 'gpu device id')
     # seed
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument(
@@ -139,6 +140,8 @@ def get_args():
     args.tfboard_path = os.path.join('./experiments', 'TFBoard', Path(args.config).stem, args.exp_name)
     args.log_name = Path(args.config).stem
     create_experiment_dir(args)
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     return args
 
 def create_experiment_dir(args):

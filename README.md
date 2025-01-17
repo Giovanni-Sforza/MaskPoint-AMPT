@@ -96,15 +96,13 @@ please make sure that gcc has been updated. you can use conda to install some ne
 ### Pretraining
 To start pretraining with the AMPT dataset, run the following command:
 ```bash
-python main.py --config cfgs/pretrain_ampt_data.yaml \
-    --exp_name ampt \
-    --val_freq 10
+python main.py --config cfgs/pretrain_ampt_data.yaml --exp_name ampt --val_freq 10 --gpu 0
 ```
 
 - `--config`: Path to the configuration file
 - `--exp_name`: Name of the experiment
 - `--val_freq`: Validation frequency during training
-
+- `--gpu`: Gpu device number
 ### Fineturning
 
 Coming soon !
