@@ -19,7 +19,7 @@ The primary goals of the MaskPoint-AMPT project are:
 ├── datasets/             # Dataset loaders and transformation utilities
 ├── experiments/          # Logs and results for experiments
 ├── extensions/           # PointNet++ and custom point cloud operators
-├── figure/               # Visual resources such as diagrams
+├── figure/               # Visual resources
 ├── models/               # Core models, including MaskPoint
 ├── scripts/              # Helper scripts for testing
 ├── tools/                # Training and pretraining utilities
@@ -27,7 +27,6 @@ The primary goals of the MaskPoint-AMPT project are:
 ├── install.sh            # Installation script for environment setup
 ├── main.py               # Entry point for training and evaluation
 ├── requirements.txt      # Python dependencies
-├── LICENSE               # License information
 └── README.md             # Project documentation (this file)
 ```
 
@@ -47,12 +46,12 @@ The primary goals of the MaskPoint-AMPT project are:
    - GCC >= 4.9
    - torchvision
 
-   if your meet the trouble that `version `GLIBC_2.18' not found`, you can try to install the open3d == 0.9.0 in env python == 3.7:
+   if your meet the trouble that `version `GLIBC_2.18' not found`, which may be caused by open3d. so you can try to install the open3d == 0.9.0 in env python == 3.7:
    ```bash
    conda search -c open3d-admin open3d==0.9.0
    ```
 
-   Install required Python packages:
+   then, install required Python packages:
    ```bash
    pip install -r requirements.txt
    ```
@@ -83,12 +82,12 @@ please make sure that gcc has been updated. you can use conda to install some ne
      ```
      Then, set the environment variables as follows:
      ```bash
-     export PATH="/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin:$PATH"
-     export CC=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin/gcc
-     export CXX=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/bin/g++
-     export LD_LIBRARY_PATH=/storage/fdunphome/zhangjingzong/anaconda3/envs/base_gcc_9_4_0/lib:$LD_LIBRARY_PATH
+     export PATH="path_to_anaconda3_envs/bin:$PATH"
+     export CC="path_to_anaconda3_envs/bin/gcc"
+     export CXX="path_to_anaconda3_envs/bin/g++"
+     export LD_LIBRARY_PATH="path_to_anaconda3_envs/lib:$LD_LIBRARY_PATH"
      ```
-     If you have multiple environments with GCC and G++, ensure the environment variables point to the folder of the virtual environment where the program will run.
+     If you have multiple environments with GCC and G++, or you are using gcc in a virtual env, as shown above, ensure the environment variables point to the folder of the virtual environment where the program will run, since pkgs in extensions will use gcc and be installed in the same env as the gcc you are using. 
 
 
 ## Usage
@@ -113,14 +112,14 @@ python main.py --config cfgs/finetune_ampt_data_2D6.yaml --finetune_model --ckpt
 To evaluate a model finetuned on AMPT, simply run:
 ```bash
 bash ./scripts/test.sh <GPU_IDS>\
-    --config cfgs/finetune_modelnet.yaml \
+    --config cfgs/pretrain_ampt_data.yaml \
     --ckpts <path> \
     --exp_name <name>
 ```
 
 ## License
-This project is licensed under the terms of the [LICENSE](LICENSE) file.
+coming soon!
 
 ## Acknowledgments
-Special thanks to the developers of PointNet++ and the authors of related datasets.
+Special thanks to the developers of PointNet++, MaskPoint and the authors of related datasets.
 
