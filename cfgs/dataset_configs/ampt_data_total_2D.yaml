@@ -1,0 +1,4 @@
+NAME: Amptdata
+DATA_PATH: data/ampt_np_2D/txt
+N_POINTS: 128
+PC_PATH: data/ampt_np_2D

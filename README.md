@@ -105,7 +105,18 @@ python main.py --config cfgs/pretrain_ampt_data.yaml --exp_name ampt --val_freq 
 - `--gpu`: Gpu device number
 ### Fineturning
 
-Coming soon !
+To finetune a pre-trained MaskPoint-AMPT model, simply run like:
+```bash
+python main.py --config cfgs/finetune_ampt_data_2D6.yaml --finetune_model --ckpts experiments/pretrain_ampt_data_2D6/ampt_2D6/ckpt-last.pth --exp_name ampt_data_2D6
+```
+
+To evaluate a model finetuned on AMPT, simply run:
+```bash
+bash ./scripts/test.sh <GPU_IDS>\
+    --config cfgs/finetune_modelnet.yaml \
+    --ckpts <path> \
+    --exp_name <name>
+```
 
 ## License
 This project is licensed under the terms of the [LICENSE](LICENSE) file.

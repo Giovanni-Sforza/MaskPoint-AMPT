@@ -129,8 +129,11 @@ def run_net(args, config, train_writer=None, val_writer=None):
             
             data_time.update(time.time() - batch_start_time)
             
-            points = data[0].cuda()
-            label = data[1].cuda()
+            points = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
+            #points = data[0].cuda()
+            #label = data[1].cuda()
 
             if npoints == 1024:
                 point_all = 1200
@@ -138,6 +141,8 @@ def run_net(args, config, train_writer=None, val_writer=None):
                 point_all = 4800
             elif npoints == 8192:
                 point_all = 8192
+            elif npoints == 128:
+                point_all = 128
             else:
                 raise NotImplementedError()
 
@@ -249,8 +254,12 @@ def validate(base_model, test_dataloader, epoch, val_writer, args, config, logge
     npoints = config.npoints
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
-            points = data[0].cuda()
-            label = data[1].cuda()
+            #points = data[0].cuda()
+            #label = data[1].cuda()
+
+            points = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
 
             points = misc.fps(points, npoints)
 
@@ -291,14 +300,20 @@ def validate_vote(base_model, test_dataloader, epoch, val_writer, args, config, 
     npoints = config.npoints
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
-            points_raw = data[0].cuda()
-            label = data[1].cuda()
+            #points_raw = data[0].cuda()
+            #label = data[1].cuda()
+            points_raw = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
+
             if npoints == 1024:
                 point_all = 1200
             elif npoints == 4096:
                 point_all = 4800
             elif npoints == 8192:
                 point_all = 8192
+            elif npoints == 128:
+                point_all = 128
             else:
                 raise NotImplementedError()
                 
@@ -375,8 +390,11 @@ def test(base_model, test_dataloader, args, config, logger = None):
 
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
-            points = data[0].cuda()
-            label = data[1].cuda()
+            #points = data[0].cuda()
+            #label = data[1].cuda()
+            points = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
 
             points = misc.fps(points, npoints)
 
@@ -422,14 +440,20 @@ def test_vote(base_model, test_dataloader, epoch, val_writer, args, config, logg
     npoints = config.npoints
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
-            points_raw = data[0].cuda()
-            label = data[1].cuda()
+            #points_raw = data[0].cuda()
+            #label = data[1].cuda()
+            points_raw = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
+
             if npoints == 1024:
                 point_all = 1200
             elif npoints == 4096:
                 point_all = 4800
             elif npoints == 8192:
                 point_all = 8192
+            elif npoints == 128:
+                point_all = 128
             else:
                 raise NotImplementedError()
                 
@@ -521,8 +545,12 @@ def test_net_extract_feat(args, config):
 
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
-            points = data[0].cuda()
-            label = data[1].cuda()
+            #points = data[0].cuda()
+            #label = data[1].cuda()
+            points_raw = data.cuda()  # Directly use the points as ShapeNet format
+            label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
+            label = label - 1
+            
 
             points = misc.fps(points, npoints)
 
