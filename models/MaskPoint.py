@@ -95,7 +95,7 @@ class PointTransformer(nn.Module):
                 base_ckpt[k[len('transformer_q.'):]] = base_ckpt[k]
             elif k.startswith('base_model'):
                 base_ckpt[k[len('base_model.'):]] = base_ckpt[k]
-            del base_ckpt[k]
+            #del base_ckpt[k]
 
 
         incompatible = self.load_state_dict(base_ckpt, strict=False)

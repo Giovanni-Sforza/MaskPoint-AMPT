@@ -542,12 +542,13 @@ def test_net_extract_feat(args, config):
     features = []
     labels = []
     num_features = 0
+    identifiers = []
 
     with torch.no_grad():
         for idx, (taxonomy_ids, model_ids, data) in enumerate(test_dataloader):
             #points = data[0].cuda()
             #label = data[1].cuda()
-            points_raw = data.cuda()  # Directly use the points as ShapeNet format
+            points = data.cuda()  # Directly use the points as ShapeNet format
             label = torch.tensor([int(taxonomy_id) for taxonomy_id in taxonomy_ids]).cuda()  # Convert taxonomy_ids to tensor and move to GPU
             label = label - 1
             
@@ -557,10 +558,13 @@ def test_net_extract_feat(args, config):
             feats_batch = base_model(points, return_feature=True)
             features.append(feats_batch.detach())
             labels.append(label.detach())
+            
+            identifiers.extend(model_ids)
             num_features += feats_batch.shape[0]
+            
 
     features = torch.cat(features, dim=0)
     labels = torch.cat(labels, dim=0)
     features_np = features.data.cpu().numpy()
     labels_np = labels.data.cpu().numpy()
-    np.savez(f'{args.experiment_path}/features', features=features_np, labels=labels_np)
+    np.savez(f'{args.experiment_path}/features', features=features_np, labels=labels_np,identifiers=np.array(identifiers, dtype=object))
