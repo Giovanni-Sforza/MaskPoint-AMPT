@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+from torch.nn import init
 from timm.models.layers import trunc_normal_
 
 from .build import MODELS
@@ -506,3 +509,209 @@ class MaskPoint(nn.Module):
                 recon_loss = self.loss_ce(query_preds, query_labels)
             recon_loss = self.query_loss_weight * recon_loss
             return recon_loss, moco_loss, acc
+
+
+
+
+@MODELS.register_module()
+class PCN(nn.Module):
+    def __init__(self, config, **kwargs):
+        super().__init__()
+        self.config = config
+        
+        # 核心参数
+        self.num_classes = config.cls_dim
+        self.num_dimension = config.get('num_dimension', 3)
+        self.ortho_reg = config.get('ortho_reg', 0.001)
+        self.drop_rate = config.get('drop_rate', 0.3)
+        
+        # 网络组件
+        self._build_network()
+        
+        # 初始化参数
+        self._initialize_weights()
+        self.build_loss_func()
+        self.ortho_loss = 0.0
+
+    def _build_network(self):
+        """构建网络结构"""
+        # TNet变换模块
+        self.input_tnet = TNet(3, self.ortho_reg)
+        self.feature_tnet = TNet(32, self.ortho_reg)
+        
+        # 特征提取序列
+        self.conv_layers = nn.Sequential(
+            ConvBN(3, 32),
+            ConvBN(32, 32),
+            ConvBN(32, 64),
+            ConvBN(64, 512)
+        )
+        
+        # 分类头
+        self.cls_head = nn.Sequential(
+            DenseBN(512, 256),
+            nn.Dropout(self.drop_rate),
+            DenseBN(256, 128),
+            nn.Dropout(self.drop_rate),
+            nn.Linear(128, self.num_classes)
+        )
+        
+        # 特征输出头
+        self.feat_head = nn.Identity()
+
+    def _initialize_weights(self):
+        """初始化分类头权重"""
+        init.normal_(self.cls_head[-1].weight, std=0.01)
+        init.constant_(self.cls_head[-1].bias, 0)
+
+    def build_loss_func(self):
+        """损失函数初始化"""
+        self.loss_ce = nn.CrossEntropyLoss()
+
+    def get_loss_acc(self, pred, target):
+        """统一计算损失和准确率"""
+        loss = self.loss_ce(pred, target)
+        pred_labels = torch.argmax(pred, dim=1)
+        acc = (pred_labels == target).float().mean()
+        return loss, acc * 100
+
+    def load_model_from_ckpt(self, ckpt_path):
+        """加载预训练权重"""
+        ckpt = torch.load(ckpt_path, map_location='cpu')
+        state_dict = ckpt.get('base_model', ckpt)
+        
+        # 键名转换规则
+        new_dict = {}
+        for k, v in state_dict.items():
+            k = k.replace("module.", "")  # 去除多GPU前缀
+            
+            # 转换encoder层到conv序列
+            if k.startswith("encoder."):
+                parts = k.split('.')
+                layer_idx = int(parts[1]) + 1
+                new_key = f"conv_layers.{layer_idx}.{'.'.join(parts[2:])}"
+                new_dict[new_key] = v
+            else:
+                new_dict[k] = v
+        
+        # 加载参数
+        msg = self.load_state_dict(new_dict, strict=False)
+        
+        # 打印加载信息
+        print(f"Successfully loaded from {ckpt_path}")
+        if msg.missing_keys:
+            print(f"Missing keys: {msg.missing_keys}")
+        if msg.unexpected_keys:
+            print(f"Unexpected keys: {msg.unexpected_keys}")
+
+    def forward(self, pts, return_feature=False):
+        """
+        前向传播
+        :param pts: 输入点云 [B, N, 3]
+        :param return_feature: 是否返回特征
+        """
+        B, N, C = pts.shape
+        self.ortho_loss = 0.0
+        
+        # 输入变换
+        trans, loss = self.input_tnet(pts.permute(0, 2, 1))
+        self.ortho_loss += loss
+        x = torch.bmm(pts, trans)  # [B, N, 3]
+        
+        # 第一卷积层
+        x = x.permute(0, 2, 1)  # [B, 3, N]
+        x = self.conv_layers[0](x)
+        
+        # 特征变换
+        trans_feat, loss = self.feature_tnet(x)
+        self.ortho_loss += loss
+        x = torch.bmm(x.permute(0, 2, 1), trans_feat).permute(0, 2, 1)
+        
+        # 后续卷积层
+        x = self.conv_layers[1](x)
+        x = self.conv_layers[2](x)
+        x = self.conv_layers[3](x)
+        
+        # 全局特征
+        x = F.max_pool1d(x, kernel_size=x.size(-1)).squeeze(-1)  # [B, 512]
+        
+        if return_feature:
+            return self.feat_head(x)
+        return self.cls_head(x)
+
+class TNet(nn.Module):
+    """空间变换网络"""
+    def __init__(self, dim, reg_weight):
+        super().__init__()
+        self.dim = dim
+        self.reg_weight = reg_weight
+        
+        self.conv_layers = nn.Sequential(
+            ConvBN(dim, 32),
+            ConvBN(32, 64),
+            ConvBN(64, 512),
+            nn.AdaptiveMaxPool1d(1)
+        )
+        self.mlp = nn.Sequential(
+            DenseBN(512, 256),
+            DenseBN(256, 128)
+        )
+        self.transform = nn.Linear(128, dim*dim)
+        self._init_weights()
+
+    def _init_weights(self):
+        """正交矩阵初始化"""
+        init.constant_(self.transform.weight, 0)
+        eye = torch.eye(self.dim).flatten()
+        init.constant_(self.transform.bias, 0)
+        self.transform.bias.data.copy_(eye)
+
+    def forward(self, x):
+        B = x.size(0)
+        x = self.conv_layers(x).squeeze(-1)
+        x = self.mlp(x)
+        
+        transform = self.transform(x).view(B, self.dim, self.dim)
+        
+        # 正交正则计算
+        identity = torch.eye(self.dim, device=x.device)
+        ortho_loss = torch.norm(
+            torch.bmm(transform, transform.transpose(1,2)) - identity,
+            p='fro', dim=(1,2)
+        ).mean() * self.reg_weight
+        
+        return transform, ortho_loss
+
+class ConvBN(nn.Module):
+    """带批归一化的1D卷积"""
+    def __init__(self, in_ch, out_ch):
+        super().__init__()
+        self.conv = nn.Conv1d(in_ch, out_ch, 1)
+        self.bn = nn.BatchNorm1d(out_ch, momentum=0.0)
+        self.act = nn.LeakyReLU(0.01)
+        
+        # 初始化
+        init.kaiming_normal_(self.conv.weight)
+        init.constant_(self.conv.bias, 0)
+        init.constant_(self.bn.weight, 1)
+        init.constant_(self.bn.bias, 0)
+
+    def forward(self, x):
+        return self.act(self.bn(self.conv(x)))
+
+class DenseBN(nn.Module):
+    """带批归一化的全连接层"""
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.fc = nn.Linear(in_dim, out_dim)
+        self.bn = nn.BatchNorm1d(out_dim, momentum=0.0)
+        self.act = nn.LeakyReLU(0.01)
+        
+        # 初始化
+        init.kaiming_normal_(self.fc.weight)
+        init.constant_(self.fc.bias, 0)
+        init.constant_(self.bn.weight, 1)
+        init.constant_(self.bn.bias, 0)
+
+    def forward(self, x):
+        return self.act(self.bn(self.fc(x)))

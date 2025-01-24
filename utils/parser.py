@@ -122,7 +122,7 @@ def get_args():
 
     if args.finetune_model and args.ckpts is None:
         raise ValueError(
-            'ckpts shouldnt be None while finetune_model mode')
+           'ckpts shouldnt be None while finetune_model mode')
 
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
