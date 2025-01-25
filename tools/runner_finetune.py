@@ -156,11 +156,11 @@ def run_net(args, config, train_writer=None, val_writer=None):
 
             ret = base_model(points)
 
-            loss, acc = base_model.module.get_loss_acc(ret, label)
+            loss_ce, acc = base_model.module.get_loss_acc(ret, label)
 
-            _loss = loss
+            loss = loss_ce #+ base_model.module.ortho_loss
 
-            _loss.backward()
+            loss.backward()
 
             # forward
             if num_iter == config.step_per_update:

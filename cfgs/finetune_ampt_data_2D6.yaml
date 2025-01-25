@@ -2,7 +2,7 @@ optimizer : {
   type: AdamW,
   kwargs: {
   lr : 0.0005, 
-  weight_decay : 0.05
+  weight_decay : 0.1
 }}
 
 scheduler: {
@@ -24,7 +24,7 @@ model : {
   pos_embed_hidden_dim: 32,
   trans_dim: 96, 
   depth: 6, 
-  drop_path_rate: 0.1, 
+  drop_path_rate: 0.5, 
   cls_dim: 2, 
   num_heads: 6,
   group_size: 2, 

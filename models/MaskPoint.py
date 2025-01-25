@@ -14,6 +14,7 @@ from extensions.pointops.functions import pointops
 from .transformer import TransformerEncoder, TransformerDecoder, Group, DummyGroup, Encoder
 from .detr.build import build_encoder as build_encoder_3detr, build_preencoder as build_preencoder_3detr
 
+import os
 
 @MODELS.register_module()
 class PointTransformer(nn.Module):
@@ -511,7 +512,7 @@ class MaskPoint(nn.Module):
             return recon_loss, moco_loss, acc
 
 
-
+#deepseek can not work
 
 @MODELS.register_module()
 class PCN(nn.Module):
@@ -523,7 +524,7 @@ class PCN(nn.Module):
         self.num_classes = config.cls_dim
         self.num_dimension = config.get('num_dimension', 3)
         self.ortho_reg = config.get('ortho_reg', 0.001)
-        self.drop_rate = config.get('drop_rate', 0.3)
+        self.drop_rate = config.get('drop_path_rate', 0.3)
         
         # 网络组件
         self._build_network()
@@ -534,7 +535,7 @@ class PCN(nn.Module):
         self.ortho_loss = 0.0
 
     def _build_network(self):
-        """构建网络结构"""
+        #构建网络结构
         # TNet变换模块
         self.input_tnet = TNet(3, self.ortho_reg)
         self.feature_tnet = TNet(32, self.ortho_reg)
@@ -555,61 +556,39 @@ class PCN(nn.Module):
             nn.Dropout(self.drop_rate),
             nn.Linear(128, self.num_classes)
         )
-        
+        self.dropout = nn.Dropout(self.drop_rate)
         # 特征输出头
         self.feat_head = nn.Identity()
 
     def _initialize_weights(self):
-        """初始化分类头权重"""
+        #初始化分类头权重
         init.normal_(self.cls_head[-1].weight, std=0.01)
         init.constant_(self.cls_head[-1].bias, 0)
 
     def build_loss_func(self):
-        """损失函数初始化"""
+        #损失函数初始化
         self.loss_ce = nn.CrossEntropyLoss()
 
-    def get_loss_acc(self, pred, target):
-        """统一计算损失和准确率"""
-        loss = self.loss_ce(pred, target)
-        pred_labels = torch.argmax(pred, dim=1)
-        acc = (pred_labels == target).float().mean()
-        return loss, acc * 100
 
-    def load_model_from_ckpt(self, ckpt_path):
-        """加载预训练权重"""
-        ckpt = torch.load(ckpt_path, map_location='cpu')
-        state_dict = ckpt.get('base_model', ckpt)
-        
-        # 键名转换规则
-        new_dict = {}
-        for k, v in state_dict.items():
-            k = k.replace("module.", "")  # 去除多GPU前缀
-            
-            # 转换encoder层到conv序列
-            if k.startswith("encoder."):
-                parts = k.split('.')
-                layer_idx = int(parts[1]) + 1
-                new_key = f"conv_layers.{layer_idx}.{'.'.join(parts[2:])}"
-                new_dict[new_key] = v
-            else:
-                new_dict[k] = v
-        
-        # 加载参数
-        msg = self.load_state_dict(new_dict, strict=False)
-        
-        # 打印加载信息
-        print(f"Successfully loaded from {ckpt_path}")
-        if msg.missing_keys:
-            print(f"Missing keys: {msg.missing_keys}")
-        if msg.unexpected_keys:
-            print(f"Unexpected keys: {msg.unexpected_keys}")
+    def load_model_from_ckpt(self, bert_ckpt_path):
+        ckpt = torch.load(bert_ckpt_path, map_location="cpu")
+        base_ckpt = {k.replace("module.", ""): v for k, v in ckpt['base_model'].items()}
+        for k in list(base_ckpt.keys()):
+            if k.startswith('transformer_q') and not k.startswith('transformer_q.cls_head'):
+                base_ckpt[k[len('transformer_q.'):]] = base_ckpt[k]
+            elif k.startswith('base_model'):
+                base_ckpt[k[len('base_model.'):]] = base_ckpt[k]
+            #del base_ckpt[k]
+
+
+        incompatible = self.load_state_dict(base_ckpt, strict=False)
 
     def forward(self, pts, return_feature=False):
-        """
-        前向传播
+        
+        '''前向传播
         :param pts: 输入点云 [B, N, 3]
-        :param return_feature: 是否返回特征
-        """
+        :param return_feature: 是否返回特征'''
+        
         B, N, C = pts.shape
         self.ortho_loss = 0.0
         
@@ -621,12 +600,12 @@ class PCN(nn.Module):
         # 第一卷积层
         x = x.permute(0, 2, 1)  # [B, 3, N]
         x = self.conv_layers[0](x)
-        
+        #x = self.dropout(x)
         # 特征变换
         trans_feat, loss = self.feature_tnet(x)
         self.ortho_loss += loss
         x = torch.bmm(x.permute(0, 2, 1), trans_feat).permute(0, 2, 1)
-        
+        #x = self.dropout(x)
         # 后续卷积层
         x = self.conv_layers[1](x)
         x = self.conv_layers[2](x)
@@ -637,10 +616,18 @@ class PCN(nn.Module):
         
         if return_feature:
             return self.feat_head(x)
+        #_ = self.cls_head(x)
+        #print(_.max(dim=1))
         return self.cls_head(x)
 
+    def get_loss_acc(self, pred, target):
+        #统一计算损失和准确率
+        loss = self.loss_ce(pred, target) + self.ortho_loss
+        pred_labels = torch.argmax(pred, dim=1)
+        acc = (pred_labels == target).float().mean()
+        return loss, acc * 100
 class TNet(nn.Module):
-    """空间变换网络"""
+    #空间变换网络
     def __init__(self, dim, reg_weight):
         super().__init__()
         self.dim = dim
@@ -660,7 +647,7 @@ class TNet(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        """正交矩阵初始化"""
+        #正交矩阵初始化
         init.constant_(self.transform.weight, 0)
         eye = torch.eye(self.dim).flatten()
         init.constant_(self.transform.bias, 0)
@@ -683,12 +670,12 @@ class TNet(nn.Module):
         return transform, ortho_loss
 
 class ConvBN(nn.Module):
-    """带批归一化的1D卷积"""
+    #带批归一化的1D卷积
     def __init__(self, in_ch, out_ch):
         super().__init__()
         self.conv = nn.Conv1d(in_ch, out_ch, 1)
-        self.bn = nn.BatchNorm1d(out_ch, momentum=0.0)
-        self.act = nn.LeakyReLU(0.01)
+        self.bn = nn.BatchNorm1d(out_ch, momentum=0.1)
+        self.act = nn.LeakyReLU(negative_slope=0.01)
         
         # 初始化
         init.kaiming_normal_(self.conv.weight)
@@ -700,12 +687,12 @@ class ConvBN(nn.Module):
         return self.act(self.bn(self.conv(x)))
 
 class DenseBN(nn.Module):
-    """带批归一化的全连接层"""
+    #带批归一化的全连接层
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.fc = nn.Linear(in_dim, out_dim)
-        self.bn = nn.BatchNorm1d(out_dim, momentum=0.0)
-        self.act = nn.LeakyReLU(0.01)
+        self.bn = nn.BatchNorm1d(out_dim, momentum=0.1)
+        self.act = nn.LeakyReLU(negative_slope=0.01)
         
         # 初始化
         init.kaiming_normal_(self.fc.weight)

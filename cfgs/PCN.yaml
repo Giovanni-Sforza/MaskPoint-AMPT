@@ -1,20 +1,20 @@
 optimizer : {
   type: AdamW,
   kwargs: {
-  lr : 0.0005, 
-  weight_decay : 0.05
+  lr : 0.0001, 
+  weight_decay : 0.0001
 }}
 
 scheduler: {
   type: CosLR,
   kwargs: {
     epochs: 300,
-    initial_epochs : 1
+    initial_epochs : 0
 }}
 
 dataset : {
   train : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
-            others: {subset: 'train'}},
+            others: {subset: 'train' ,whole: Flase}},
   val : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
             others: {subset: 'test'}},
   test : { _base_: cfgs/dataset_configs/ampt_data_total_3D.yaml, 
@@ -24,8 +24,9 @@ model : {
   #pos_embed_hidden_dim: 128,
   #trans_dim: 384, 
   #depth: 12, 
-  #drop_path_rate: 0.1, 
+  drop_path_rate: 0.3, 
   cls_dim: 2, 
+  num_dimension: 3,
   #num_heads: 6,
   #group_size: 32, 
   #num_group: 64, 
