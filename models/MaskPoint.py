@@ -512,7 +512,6 @@ class MaskPoint(nn.Module):
             return recon_loss, moco_loss, acc
 
 
-#deepseek can not work
 
 @MODELS.register_module()
 class PCN(nn.Module):
