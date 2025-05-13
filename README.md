@@ -121,5 +121,10 @@ bash ./scripts/test.sh <GPU_IDS>\
 coming soon!
 
 ## Acknowledgments
-Special thanks to the developers of PointNet++, MaskPoint and the authors of related datasets.
-
+Special thanks to the developers of PointNet++, MaskPoint and the authors of related datasets. and the original MaskPoint can be found in https://github.com/WisconsinAIVision/MaskPoint
+@article{liu2022masked,
+  title={Masked Discrimination for Self-Supervised Learning on Point Clouds},
+  author={Liu, Haotian and Cai, Mu and Lee, Yong Jae},
+  journal={Proceedings of the European Conference on Computer Vision (ECCV)},
+  year={2022}
+}
