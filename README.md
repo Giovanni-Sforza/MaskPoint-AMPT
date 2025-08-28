@@ -109,14 +109,6 @@ To finetune a pre-trained MaskPoint-AMPT model, simply run like:
 python main.py --config cfgs/finetune_ampt_data.yaml --finetune_model --ckpts experiments/pretrain_ampt_data/ampt/ckpt-last.pth --exp_name ampt_data --gpu 0
 ```
 
-To evaluate a model finetuned on AMPT, simply run:
-```bash
-bash ./scripts/test.sh <GPU_IDS>\
-    --config cfgs/pretrain_ampt_data.yaml \
-    --ckpts <path> \
-    --exp_name <name>
-```
-
 ## License
 coming soon!
 
